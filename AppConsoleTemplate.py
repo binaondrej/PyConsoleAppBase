@@ -20,6 +20,101 @@ class Machine:
 		else:
 			return Machine.UNDEFINED
 
+
+class Locale:
+	##### CORE TRANSLATIONS #####
+	LANGUAGE: str
+	CZECH: str
+	ENGLISH: str
+	OPTION: str
+	BACK: str
+	QUIT: str
+	BOOL_Y: str
+	BOOL_N: str
+	# errors
+	INVALID_OPTION: str
+	FILE_DOES_NOT_EXIST: str
+	FILE_ALREADY_EXISTS: str
+	FILE_TYPE_NOT_SUPPORTED: str
+	INVALID_RANGE: str
+	UNSUPPORTED_OS: str
+	TRANSLATION_NOT_IMPLEMENTED: str
+	INVALID_LANGUAGE: str
+	#############################
+	COUNTER: str
+	VALUE_EDIT: str
+	INCREASE: str
+	DECREASE: str
+	INCREASE_BY: str
+	SET_VALUE: str
+	NEW_VALUE: str
+	CLEAR_COUNTER: str
+
+	def translate(self, identifier: str, *params) -> str:
+		text: str = eval('self.' + identifier)
+		for item in params:
+			text = text.replace('{%}', str(item), 1)
+		return text
+
+class LocaleEn(Locale):
+	##### CORE TRANSLATIONS #####
+	LANGUAGE = 'Language'
+	CZECH = 'Czech'
+	ENGLISH = 'English'
+	OPTION = 'Option'
+	BACK = 'Back'
+	QUIT = 'Quit'
+	BOOL_Y = 'Y'
+	BOOL_N = 'n'
+	# errors
+	INVALID_OPTION = 'Invalid option'
+	FILE_DOES_NOT_EXIST = 'File does not exist'
+	FILE_ALREADY_EXISTS = 'File already exists'
+	FILE_TYPE_NOT_SUPPORTED = 'File type is not supported'
+	INVALID_RANGE = 'Invalid range'
+	UNSUPPORTED_OS = 'UNSUPPORTED OS'
+	TRANSLATION_NOT_IMPLEMENTED = 'Translation for language \'{%}\' is not implemented'
+	INVALID_LANGUAGE = 'Invalid language \'{%}\''
+	#############################
+	COUNTER = 'Counter'
+	VALUE_EDIT = 'Value edit'
+	INCREASE = 'Increase'
+	DECREASE = 'Decrease'
+	INCREASE_BY = 'Increase by {%}'
+	SET_VALUE = 'Set value'
+	NEW_VALUE = 'New value'
+	CLEAR_COUNTER = 'Clear counter'
+
+class LocaleCs(Locale):
+	##### CORE TRANSLATIONS #####
+	LANGUAGE = 'Jazyk'
+	CZECH = 'Čeština'
+	ENGLISH = 'Angličtina'
+	OPTION = 'Volba'
+	BACK = 'Zpět'
+	QUIT = 'Ukončit'
+	BOOL_Y = 'A'
+	BOOL_N = 'n'
+	# errors
+	INVALID_OPTION = 'Neplatná volba'
+	FILE_DOES_NOT_EXIST = 'Soubor neexistuje'
+	FILE_ALREADY_EXISTS = 'Soubor již existuje'
+	FILE_TYPE_NOT_SUPPORTED = 'Nepodporovaný typ souboru'
+	INVALID_RANGE = 'Neplatné rozmezí'
+	UNSUPPORTED_OS = 'NEPODPOROVANÝ OS'
+	TRANSLATION_NOT_IMPLEMENTED = 'Překlad pro jazyk \'{%}\' není implementován'
+	INVALID_LANGUAGE = 'Neplatný jazyk \'{%}\''
+	#############################
+	COUNTER = 'Počítadlo'
+	VALUE_EDIT = 'Změnit hodnotu'
+	INCREASE = 'Zvýšit'
+	DECREASE = 'Snížit'
+	INCREASE_BY = 'Zvýšit o {%}'
+	SET_VALUE = 'Nastavit hodnotu'
+	NEW_VALUE = 'Nová hodnota'
+	CLEAR_COUNTER = 'Vnulovat počítadlo'
+
+
 class MenuItem:
 	def __init__(self, title: str, fnc: callable = None, fnc_args: list = [], submenu: dict|None = None, title_only: bool = False, show_condition: str|None = None) -> None:
 		self.title = title
@@ -130,8 +225,95 @@ class Menu:
 
 		return result
 
+
+class Config:
+	def __init__(self, loader: callable, saver: callable = None, path: str|None = None, default_data: dict = {}, default_lang: str = 'en') -> None:
+		"""
+		Parameters
+		----------
+		loader: callable
+			params:
+				dict (data read from file)
+			returns:
+				dict|None (data to keep in memory)
+		saver: callable
+			params:
+				dict (data kept in memory)
+			returns:
+				dict|None (data to write to file)
+		path : str|None
+		default_data: dict|None
+		default_lang: str
+			shortcut for language (en/cs/...)
+		Returns
+		-------
+		bool
+			if the loader was successful
+		"""
+		self.__instantiated = False
+
+		self.__locale: Locale = Locale()
+		self.__lang: str = default_lang
+		self.lang = default_lang
+
+		self.path: str|None = path
+		self.data: dict = default_data
+		self.loader: callable = loader
+		self.saver: callable = saver
+
+		self.__instantiated = True
+
+	@property
+	def lang(self) -> str:
+		return self.__lang
+	@lang.setter
+	def lang(self, lang: str) -> None:
+		if len(lang) != 2:
+			raise ValueError(self.locale.translate('INVALID_LANGUAGE', lang))
+		lang = lang.lower()
+		try:
+			self.__locale = eval('Locale' + lang[0].upper() + lang[1:] + '()')
+			self.__lang = lang
+		except:
+			raise NotImplementedError(self.locale.translate('TRANSLATION_NOT_IMPLEMENTED', lang))
+		if self.__instantiated and self.path and self.saver:
+			self.save()
+	@property
+	def locale(self) -> Locale:
+		return self.__locale
+
+	def load(self, path: str = None) -> bool:
+		if not path:
+			path = self.path
+		try:
+			with open(path, 'r', encoding='UTF-8') as file:
+				conf_content: dict = json.load(file)
+				if 'lang' in conf_content:
+					self.lang = conf_content['lang']
+					del conf_content['lang']
+		except:
+			return False
+		data = self.loader(conf_content)
+		if data is None:
+			return False
+		self.path = path
+		self.data = data
+		return True
+
+	def save(self) -> bool:
+		data = self.saver(self.data)
+		if data is None:
+			return False
+		data = {**{'lang': self.lang}, **self.data}
+		try:
+			with open(self.path, 'w', encoding='UTF-8') as file:
+				json.dump(data, file, indent='	')
+		except:
+			return False
+		return True
+
 class Core:
-	def __init__(self, title: str, menu: Menu, show_menu_path: bool = False) -> None:
+	def __init__(self, title: str, menu: Menu, config: Config, show_menu_path: bool = False) -> None:
 		"""
 		Parameters
 		----------
@@ -141,6 +323,7 @@ class Core:
 		show_menu_path : bool = False
 			if True, on the top of menu will be shown current path in menu
 		"""
+		self.config: Config = config
 		self.title: str = title
 		self.menu: Menu = menu
 		self.showMenuPath: bool = show_menu_path
@@ -160,14 +343,14 @@ class Core:
 				if self.actionsStack:
 					tmp = self.actionsStack.pop(0)
 					self.__stdin = [tmp[0]] + tmp[1]
-				option = self.input('Option: ')
+				option = self.input(self.config.locale.OPTION + ': ')
 				if option.isdigit():
 					option = int(option)
 				current_submenu = self.menu.get_option(option)
 				if current_submenu and (not current_submenu.show_condition or self.menu.eval(current_submenu.show_condition)) and not current_submenu.title_only:
 					break
 				else:
-					print('Invalid option')
+					print(self.config.locale.INVALID_OPTION)
 			if current_submenu.fnc:
 				print()
 				current_submenu.fnc(*current_submenu.fnc_args)
@@ -186,7 +369,7 @@ class Core:
 			terminal_size_columns: int = os.get_terminal_size().columns
 		except:
 			terminal_size_columns: int = 80
-		print(('{:=^' + str(terminal_size_columns) + '}').format(' ' + self.title + ' '))
+		print(('{:=^' + str(terminal_size_columns) + '}').format(' ' + eval(self.title) + ' '))
 
 	def set_title(self, title: str|None = None) -> None:
 		title = self.title + ' - ' + title if title else self.title
@@ -194,10 +377,10 @@ class Core:
 		if machine_os == Machine.WINDOWS:
 			os.system('title ' + title)
 		elif machine_os == Machine.DARWIN:
-			os.system('echo -n -e "\033]0;' + title + '\007"')
+			os.system('echo -n -e "\033]0;' + eval(title) + '\007"')
 			pass
 		else:
-			self.input('UNSUPPORTED OS')
+			self.input(self.config.locale.UNSUPPORTED_OS)
 			exit(1)
 
 	def menu_back(self) -> None:
@@ -222,15 +405,19 @@ class Core:
 			if x.isdigit():
 				return int(x)
 
-	def input_int_range(self, text_from: str, text_to: str) -> tuple[int, int]|None:
+	def input_int_range(self, text_from: str, text_to: str, required: bool = True) -> tuple[int, int]|None:
 		while True:
-			tmp = (self.input_int(text_from), self.input_int(text_to))
-			if tmp[0] <= tmp[1]:
+			tmp = (self.input_int(text_from, required), self.input_int(text_to, required))
+			if tmp[0] is None or tmp[1] is None:
+				return None
+			if tmp[0] < tmp[1]:
 				return tmp
 			else:
-				print('Invalid range')
+				print(self.config.locale.INVALID_RANGE)
 
-	def input_bool(self, text: str, required: bool = True, options: tuple[str] = ('Y', 'n')) -> bool|None:
+	def input_bool(self, text: str, required: bool = True, options: tuple[str,str]|None = None) -> bool|None:
+		if options is None:
+			options = (self.config.locale.BOOL_Y, self.config.locale.BOOL_N)
 		while True:
 			x = self.input(text + ' (' + options[0].upper() + '/' + options[1].lower() + '): ')
 			if not x and not required:
@@ -258,17 +445,17 @@ class Core:
 			if existing is not None:
 				if existing:
 					if not os.path.isfile(x):
-						print('File does not exist.')
+						print(self.config.locale.FILE_DOES_NOT_EXIST)
 						continue
 				else:
 					if os.path.isfile(x):
-						print('File already exists.')
+						print(self.config.locale.FILE_ALREADY_EXISTS)
 						continue
 
 			if extensions:
 				name, extension = os.path.splitext(x)
 				if not extension in extensions:
-					print('File type is not supported.')
+					print(self.config.locale.FILE_TYPE_NOT_SUPPORTED)
 					continue
 
 			return x
@@ -283,86 +470,57 @@ class Core:
 			if x in options:
 				return int(x) if x.isdigit() else x
 
-class Config:
-	def __init__(self, loader: callable, saver: callable = None, path: str|None = None, default_data: dict = {}) -> None:
-		"""
-		Parameters
-		----------
-		path : str|None
-		loader: callable
-			params:
-				dict (data read from file)
-			returns:
-				dict|None (data to keep in memory)
-		saver: callable
-			params:
-				dict (data kept in memory)
-			returns:
-				dict|None (data to write to file)
-		Returns
-		-------
-		bool
-			if the loader was successful
-		"""
-		self.path: str|None = path
-		self.data: dict = default_data
-		self.loader: callable = loader
-		self.saver: callable = saver
+	def simple_menu(self, options: dict|list, required: bool = True) -> str|int|None:
+		_opts: dict = {}
+		if type(options) is dict:
+			for key in options:
+				_opts[str(key)] = options[key]
+		else:
+			for i in range(len(options)):
+				_opts[str(i + 1)] = options[i]
+		options = _opts
 
-	def load(self, path: str = None) -> bool:
-		if not path:
-			path = self.path
-		try:
-			with open(path, 'r', encoding='UTF-8') as file:
-				conf_content: dict = json.load(file)
-		except:
-			return False
-		data = self.loader(conf_content)
-		if data is None:
-			return False
-		self.path = path
-		self.data = data
-		return True
+		for key in options:
+			print('{:.<5}.. {}'.format(str(key) +  ' ', options[key]))
+		return self.input_option(self.config.locale.LANGUAGE, list(options.keys()), required)
 
-	def save(self) -> bool:
-		data = self.saver(self.data)
-		if data is None:
-			return False
-		try:
-			with open(self.path, 'w', encoding='UTF-8') as file:
-				json.dump(data, file, indent='	')
-		except:
-			return False
-		return True
+	def prompt_change_language(self, toggle: bool) -> None:
+		all_languages = ['cs', 'en']
+		all_languages_full = [self.config.locale.CZECH, self.config.locale.ENGLISH]
+		if toggle:
+			self.config.lang = all_languages[(all_languages.index(self.config.lang) + 1) % len(self.config.lang)]
+		else:
+			self.config.lang = all_languages[self.simple_menu(all_languages_full) - 1]
+
 
 
 class MyApp(Core):
 	def __init__(self):
 		super().__init__(
-			'Counter',
+			'self.config.locale.COUNTER',
 			Menu(
 				{
-					'counterDisplay': MenuItem('Counter: {{self.config.data[\'counter\']}}', title_only=True),
-					'S': MenuItem('Value edit', submenu={
-						'counterDisplay': MenuItem('Counter: {{self.config.data[\'counter\']}}', title_only=True),
-						'I': MenuItem('Increase', self.counter_increase),
-						'D': MenuItem('Decrease', self.counter_decrease),
-						'IT': MenuItem('Increase by 10', self.counter_increase, [10]),
-						'S': MenuItem('Set value', self.counter_set_prompt),
-						'C': MenuItem('Clear counter', self.counter_clear_prompt),
-						'b': MenuItem('Back', self.menu_back)
+					'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
+					'E': MenuItem('{{self.config.locale.VALUE_EDIT}}', submenu={
+						'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
+						'I': MenuItem('{{self.config.locale.INCREASE}}', self.counter_increase),
+						'D': MenuItem('{{self.config.locale.DECREASE}}', self.counter_decrease),
+						'IT': MenuItem('{{self.config.locale.translate(\'INCREASE_BY\', 10)}}', self.counter_increase, [10]),
+						'S': MenuItem('{{self.config.locale.SET_VALUE}}', self.counter_set_prompt),
+						'C': MenuItem('{{self.config.locale.CLEAR_COUNTER}}', self.counter_clear_prompt),
+						'b': MenuItem('{{self.config.locale.BACK}}', self.menu_back)
 					}),
-					'e': MenuItem('End', exit),
+					'L': MenuItem('{{self.config.locale.LANGUAGE}} ({{self.config.lang}})', self.prompt_change_language, [True]),
+					'q': MenuItem('{{self.config.locale.QUIT}}', exit),
 				},
 				self
 			),
-			True
-		)
-		self.config: Config = Config(
-			self.__config_loader,
-			self.__config_saver,
-			os.path.splitext(os.path.basename(__file__))[0] + '.conf',
-			self.__config_loader({})
+			Config(
+				self.__config_loader,
+				self.__config_saver,
+				os.path.splitext(os.path.basename(__file__))[0] + '.conf',
+				self.__config_loader({})
+			)
 		)
 		self.config.load()
 
@@ -393,7 +551,7 @@ class MyApp(Core):
 		self.config.save()
 
 	def counter_set_prompt(self) -> None:
-		self.counter_set(self.input_int('New value'))
+		self.counter_set(self.input_int(self.config.locale.NEW_VALUE))
 
 	def counter_clear(self) -> None:
 		self.config.data['counter'] = 0
