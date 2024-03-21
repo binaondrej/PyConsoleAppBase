@@ -6,20 +6,6 @@ import re
 import json
 
 
-class Machine:
-	UNDEFINED = 0
-	WINDOWS = 1
-	DARWIN = 2
-
-	@staticmethod
-	def get_os() -> int:
-		if platform.system() == 'Windows':
-			return Machine.WINDOWS
-		elif platform.system() == 'Darwin':
-			return Machine.DARWIN
-		else:
-			return Machine.UNDEFINED
-
 
 class Locale:
 	##### CORE TRANSLATIONS #####
@@ -115,6 +101,22 @@ class LocaleCs(Locale):
 	CLEAR_COUNTER = 'Vnulovat počítadlo'
 
 
+
+class Machine:
+	UNDEFINED = 0
+	WINDOWS = 1
+	DARWIN = 2
+
+	@staticmethod
+	def get_os() -> int:
+		if platform.system() == 'Windows':
+			return Machine.WINDOWS
+		elif platform.system() == 'Darwin':
+			return Machine.DARWIN
+		else:
+			return Machine.UNDEFINED
+
+
 class MenuItem:
 	def __init__(self, title: str, fnc: callable = None, fnc_args: list = [], submenu: dict|None = None, title_only: bool = False, show_condition: str|None = None) -> None:
 		self.title = title
@@ -137,8 +139,13 @@ class Menu:
 		self.menu_path: list[int|str] = []
 		self.context = context
 
-	def eval(self, source: str) -> any:
+	def __eval(self, source: str) -> any:
 		return eval(source, None, {'self': self.context})
+	def __eval_string(self, source: str) -> str:
+		source_evals = re.findall(r'\{\{.*?\}\}', source)
+		for item in source_evals:
+			source = source.replace(item, str(self.__eval(item[2:-2])))
+		return source
 
 	def show(self) -> None:
 		"""
@@ -147,13 +154,9 @@ class Menu:
 		submenu = self.get_current().submenu
 		if submenu:
 			for key, option in submenu.items():
-				if option.show_condition and not self.eval(option.show_condition):
+				if option.show_condition and not self.__eval(option.show_condition):
 					continue
-				title: str = option.title
-				title_evals = re.findall(r'\{\{.*?\}\}', title)
-				for item in title_evals:
-					title = title.replace(item, str(self.eval(item[2:-2])))
-
+				title = self.__eval_string(option.title)
 				if not option.title_only and not option.fnc and not option.submenu:
 					title = title + ' [ NOT IMPLEMENTED ]'
 
@@ -288,11 +291,13 @@ class Config:
 		try:
 			with open(path, 'r', encoding='UTF-8') as file:
 				conf_content: dict = json.load(file)
-				if 'lang' in conf_content:
-					self.lang = conf_content['lang']
-					del conf_content['lang']
 		except:
 			return False
+		if 'lang' in conf_content:
+			self.__instantiated = False
+			self.lang = conf_content['lang']
+			del conf_content['lang']
+			self.__instantiated = True
 		data = self.loader(conf_content)
 		if data is None:
 			return False
@@ -304,7 +309,7 @@ class Config:
 		data = self.saver(self.data)
 		if data is None:
 			return False
-		data = {**{'lang': self.lang}, **self.data}
+		data = {**{'lang': self.lang}, **data}
 		try:
 			with open(self.path, 'w', encoding='UTF-8') as file:
 				json.dump(data, file, indent='	')
@@ -347,7 +352,7 @@ class Core:
 				if option.isdigit():
 					option = int(option)
 				current_submenu = self.menu.get_option(option)
-				if current_submenu and (not current_submenu.show_condition or self.menu.eval(current_submenu.show_condition)) and not current_submenu.title_only:
+				if current_submenu and (not current_submenu.show_condition or self.__eval(current_submenu.show_condition)) and not current_submenu.title_only:
 					break
 				else:
 					print(self.config.locale.INVALID_OPTION)
@@ -357,6 +362,21 @@ class Core:
 			if current_submenu.submenu:
 				self.menu.step_in(option)
 
+	def __eval(self, source: str) -> any:
+		return eval(source, None, {'self': self})
+	def __eval_string(self, source: str) -> str:
+		source_evals = re.findall(r'\{\{.*?\}\}', source)
+		for item in source_evals:
+			source = source.replace(item, str(self.__eval(item[2:-2])))
+		return source
+
+	@staticmethod
+	def get_terminal_width() -> int:
+		try:
+			return os.get_terminal_size().columns
+		except:
+			return 80
+
 	def clear_screen(self) -> None:
 		machine_os = Machine.get_os()
 		if machine_os == Machine.WINDOWS:
@@ -365,20 +385,15 @@ class Core:
 			os.system('clear')
 		else:
 			print('\n\n')
-		try:
-			terminal_size_columns: int = os.get_terminal_size().columns
-		except:
-			terminal_size_columns: int = 80
-		print(('{:=^' + str(terminal_size_columns) + '}').format(' ' + eval(self.title) + ' '))
+		print(('{:=^' + str(self.get_terminal_width()) + '}').format(' ' + self.__eval_string(self.title) + ' '))
 
 	def set_title(self, title: str|None = None) -> None:
-		title = self.title + ' - ' + title if title else self.title
+		title = self.__eval_string(self.title + ' - ' + title) if title else self.__eval_string(self.title)
 		machine_os = Machine.get_os()
 		if machine_os == Machine.WINDOWS:
-			os.system('title ' + title)
+			os.system('title ' + str(title))
 		elif machine_os == Machine.DARWIN:
-			os.system('echo -n -e "\033]0;' + eval(title) + '\007"')
-			pass
+			os.system('echo -n -e "\033]0;' + str(title) + '\007"')
 		else:
 			self.input(self.config.locale.UNSUPPORTED_OS)
 			exit(1)
@@ -470,7 +485,7 @@ class Core:
 			if x in options:
 				return int(x) if x.isdigit() else x
 
-	def simple_menu(self, options: dict|list, required: bool = True) -> str|int|None:
+	def simple_menu(self, options: dict|list, prompt: str|None = None, required: bool = True) -> str|int|None:
 		_opts: dict = {}
 		if type(options) is dict:
 			for key in options:
@@ -482,7 +497,7 @@ class Core:
 
 		for key in options:
 			print('{:.<5}.. {}'.format(str(key) +  ' ', options[key]))
-		return self.input_option(self.config.locale.LANGUAGE, list(options.keys()), required)
+		return self.input_option(self.config.locale.OPTION if prompt is None else prompt, list(options.keys()), required)
 
 	def prompt_change_language(self, toggle: bool) -> None:
 		all_languages = ['cs', 'en']
@@ -490,14 +505,22 @@ class Core:
 		if toggle:
 			self.config.lang = all_languages[(all_languages.index(self.config.lang) + 1) % len(self.config.lang)]
 		else:
-			self.config.lang = all_languages[self.simple_menu(all_languages_full) - 1]
+			self.config.lang = all_languages[self.simple_menu(all_languages_full, self.config.locale.LANGUAGE) - 1]
+		self.set_title()
 
 
 
 class MyApp(Core):
 	def __init__(self):
+		config: Config = Config(
+			self.__config_loader,
+			self.__config_saver,
+			os.path.splitext(os.path.basename(__file__))[0] + '.conf',
+			self.__config_loader({})
+		)
+		config.load()
 		super().__init__(
-			'self.config.locale.COUNTER',
+			'{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}',
 			Menu(
 				{
 					'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
@@ -515,14 +538,8 @@ class MyApp(Core):
 				},
 				self
 			),
-			Config(
-				self.__config_loader,
-				self.__config_saver,
-				os.path.splitext(os.path.basename(__file__))[0] + '.conf',
-				self.__config_loader({})
-			)
+			config
 		)
-		self.config.load()
 
 	@staticmethod
 	def __config_loader(data: dict) -> dict|None:
