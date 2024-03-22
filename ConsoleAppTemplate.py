@@ -4,102 +4,7 @@ import os
 import platform
 import re
 import json
-
-
-
-class Locale:
-	##### CORE TRANSLATIONS #####
-	LANGUAGE: str
-	CZECH: str
-	ENGLISH: str
-	OPTION: str
-	BACK: str
-	QUIT: str
-	BOOL_Y: str
-	BOOL_N: str
-	# errors
-	INVALID_OPTION: str
-	FILE_DOES_NOT_EXIST: str
-	FILE_ALREADY_EXISTS: str
-	FILE_TYPE_NOT_SUPPORTED: str
-	INVALID_RANGE: str
-	UNSUPPORTED_OS: str
-	TRANSLATION_NOT_IMPLEMENTED: str
-	INVALID_LANGUAGE: str
-	#############################
-	COUNTER: str
-	VALUE_EDIT: str
-	INCREASE: str
-	DECREASE: str
-	INCREASE_BY: str
-	SET_VALUE: str
-	NEW_VALUE: str
-	CLEAR_COUNTER: str
-
-	def translate(self, identifier: str, *params) -> str:
-		text: str = eval('self.' + identifier)
-		for item in params:
-			text = text.replace('{%}', str(item), 1)
-		return text
-
-class LocaleEn(Locale):
-	##### CORE TRANSLATIONS #####
-	LANGUAGE = 'Language'
-	CZECH = 'Czech'
-	ENGLISH = 'English'
-	OPTION = 'Option'
-	BACK = 'Back'
-	QUIT = 'Quit'
-	BOOL_Y = 'Y'
-	BOOL_N = 'n'
-	# errors
-	INVALID_OPTION = 'Invalid option'
-	FILE_DOES_NOT_EXIST = 'File does not exist'
-	FILE_ALREADY_EXISTS = 'File already exists'
-	FILE_TYPE_NOT_SUPPORTED = 'File type is not supported'
-	INVALID_RANGE = 'Invalid range'
-	UNSUPPORTED_OS = 'UNSUPPORTED OS'
-	TRANSLATION_NOT_IMPLEMENTED = 'Translation for language \'{%}\' is not implemented'
-	INVALID_LANGUAGE = 'Invalid language \'{%}\''
-	#############################
-	COUNTER = 'Counter'
-	VALUE_EDIT = 'Value edit'
-	INCREASE = 'Increase'
-	DECREASE = 'Decrease'
-	INCREASE_BY = 'Increase by {%}'
-	SET_VALUE = 'Set value'
-	NEW_VALUE = 'New value'
-	CLEAR_COUNTER = 'Clear counter'
-
-class LocaleCs(Locale):
-	##### CORE TRANSLATIONS #####
-	LANGUAGE = 'Jazyk'
-	CZECH = 'Čeština'
-	ENGLISH = 'Angličtina'
-	OPTION = 'Volba'
-	BACK = 'Zpět'
-	QUIT = 'Ukončit'
-	BOOL_Y = 'A'
-	BOOL_N = 'n'
-	# errors
-	INVALID_OPTION = 'Neplatná volba'
-	FILE_DOES_NOT_EXIST = 'Soubor neexistuje'
-	FILE_ALREADY_EXISTS = 'Soubor již existuje'
-	FILE_TYPE_NOT_SUPPORTED = 'Nepodporovaný typ souboru'
-	INVALID_RANGE = 'Neplatné rozmezí'
-	UNSUPPORTED_OS = 'NEPODPOROVANÝ OS'
-	TRANSLATION_NOT_IMPLEMENTED = 'Překlad pro jazyk \'{%}\' není implementován'
-	INVALID_LANGUAGE = 'Neplatný jazyk \'{%}\''
-	#############################
-	COUNTER = 'Počítadlo'
-	VALUE_EDIT = 'Změnit hodnotu'
-	INCREASE = 'Zvýšit'
-	DECREASE = 'Snížit'
-	INCREASE_BY = 'Zvýšit o {%}'
-	SET_VALUE = 'Nastavit hodnotu'
-	NEW_VALUE = 'Nová hodnota'
-	CLEAR_COUNTER = 'Vnulovat počítadlo'
-
+from Locales import *
 
 
 class Machine:
@@ -499,86 +404,25 @@ class Core:
 			print('{:.<5}.. {}'.format(str(key) +  ' ', options[key]))
 		return self.input_option(self.config.locale.OPTION if prompt is None else prompt, list(options.keys()), required)
 
-	def prompt_change_language(self, toggle: bool) -> None:
-		all_languages = ['cs', 'en']
-		all_languages_full = [self.config.locale.CZECH, self.config.locale.ENGLISH]
+	def prompt_change_language(self, languages: dict[str, str], toggle: bool = False) -> None:
+		"""
+		Prompts language change
+		Parameters
+		----------
+		languages: dict
+			dicts of languages in format {'en': 'ENGLISH', ...}, where the value is evaluated from Locales
+		toggle: bool
+			if true, language change is toggled, else prompt a simple menu with all languages (not required)
+		"""
+		languages_keys: list[str] = list(languages.keys())
 		if toggle:
-			self.config.lang = all_languages[(all_languages.index(self.config.lang) + 1) % len(self.config.lang)]
+			self.config.lang = languages_keys[(languages_keys.index(self.config.lang) + 1) % len(languages_keys)]
 		else:
-			self.config.lang = all_languages[self.simple_menu(all_languages_full, self.config.locale.LANGUAGE) - 1]
+			languages_values: list[str] = []
+			for item in languages:
+				languages_values.append(self.__eval('self.config.locale.' + languages[item]))
+			lang_num = self.simple_menu(languages_values, self.config.locale.LANGUAGE, False)
+			if not lang_num:
+				return
+			self.config.lang = languages_keys[lang_num - 1]
 		self.set_title()
-
-
-
-class MyApp(Core):
-	def __init__(self):
-		config: Config = Config(
-			self.__config_loader,
-			self.__config_saver,
-			os.path.splitext(os.path.basename(__file__))[0] + '.conf',
-			self.__config_loader({})
-		)
-		config.load()
-		super().__init__(
-			'{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}',
-			Menu(
-				{
-					'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
-					'E': MenuItem('{{self.config.locale.VALUE_EDIT}}', submenu={
-						'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
-						'I': MenuItem('{{self.config.locale.INCREASE}}', self.counter_increase),
-						'D': MenuItem('{{self.config.locale.DECREASE}}', self.counter_decrease),
-						'IT': MenuItem('{{self.config.locale.translate(\'INCREASE_BY\', 10)}}', self.counter_increase, [10]),
-						'S': MenuItem('{{self.config.locale.SET_VALUE}}', self.counter_set_prompt),
-						'C': MenuItem('{{self.config.locale.CLEAR_COUNTER}}', self.counter_clear_prompt),
-						'b': MenuItem('{{self.config.locale.BACK}}', self.menu_back)
-					}),
-					'L': MenuItem('{{self.config.locale.LANGUAGE}} ({{self.config.lang}})', self.prompt_change_language, [True]),
-					'q': MenuItem('{{self.config.locale.QUIT}}', exit),
-				},
-				self
-			),
-			config
-		)
-
-	@staticmethod
-	def __config_loader(data: dict) -> dict|None:
-		conf: dict = {
-			'counter': data['counter'] if 'counter' in data else 0
-		}
-		return conf
-
-	@staticmethod
-	def __config_saver(data: dict) -> dict | None:
-		conf: dict = {
-			'counter': data['counter']
-		}
-		return conf
-
-	def counter_increase(self, step: int = 1) -> None:
-		self.config.data['counter'] += step
-		self.config.save()
-
-	def counter_decrease(self, step: int = 1) -> None:
-		self.config.data['counter'] -= step
-		self.config.save()
-
-	def counter_set(self, num: int) -> None:
-		self.config.data['counter'] = num
-		self.config.save()
-
-	def counter_set_prompt(self) -> None:
-		self.counter_set(self.input_int(self.config.locale.NEW_VALUE))
-
-	def counter_clear(self) -> None:
-		self.config.data['counter'] = 0
-		self.config.save()
-
-	def counter_clear_prompt(self) -> None:
-		if self.input_bool('Clear counter'):
-			self.counter_clear()
-
-
-
-app = MyApp()
-app.__main__()
