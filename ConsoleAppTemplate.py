@@ -6,6 +6,9 @@ import re
 import json
 from Locales import *
 
+"""
+Version: 2024.03.22
+"""
 
 class Machine:
 	UNDEFINED = 0
@@ -135,7 +138,7 @@ class Menu:
 
 
 class Config:
-	def __init__(self, loader: callable, saver: callable = None, path: str|None = None, default_data: dict = {}, default_lang: str = 'en') -> None:
+	def __init__(self, loader: callable = None, saver: callable = None, path: str|None = None, default_data: dict = {}, default_lang: str = 'en') -> None:
 		"""
 		Parameters
 		----------
@@ -191,6 +194,8 @@ class Config:
 		return self.__locale
 
 	def load(self, path: str = None) -> bool:
+		if self.loader is None:
+			raise NotImplementedError('Loader implementation is not configured')
 		if not path:
 			path = self.path
 		try:
@@ -211,6 +216,8 @@ class Config:
 		return True
 
 	def save(self) -> bool:
+		if self.saver is None:
+			raise NotImplementedError('Saver implementation is not configured')
 		data = self.saver(self.data)
 		if data is None:
 			return False

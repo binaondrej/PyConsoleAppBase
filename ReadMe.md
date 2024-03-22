@@ -14,6 +14,11 @@
  - This file should not be edited
 
 
-### MyCounter.py
+### MyCounterApp.py
 
  - Example of usage Console App Template
+
+
+## Compiler
+
+ - Can compile `Locales`, `ConsoleAppTemplate` and app into one standalone file
