@@ -7,7 +7,7 @@ import json
 from Locales import *
 
 """
-Version: 2024.03.22
+Version: 2024.04.04
 """
 
 class Machine:
@@ -354,7 +354,8 @@ class Core:
 			elif x.lower() == options[1].lower():
 				return False
 
-	def input_file(self, text: str, extensions: list[str]|None = None, required: bool = True, existing: bool|None = None) -> str|None:
+	def input_file(self, text: str, extensions: list[str]|None = None, required: bool = True, existing: bool|None = None, existing_file_type: str|None = None) -> str|None:
+		existing_file_type = existing_file_type.upper() if existing_file_type is not None else None
 		if extensions:
 			text += ' (' + ', '.join(extensions) + ')'
 		text = text + ': '
@@ -371,11 +372,20 @@ class Core:
 
 			if existing is not None:
 				if existing:
-					if not os.path.isfile(x):
-						print(self.config.locale.FILE_DOES_NOT_EXIST)
-						continue
+					if existing_file_type == 'F':
+						if not os.path.isfile(x):
+							print(self.config.locale.FILE_DOES_NOT_EXIST)
+							continue
+					elif existing_file_type == 'D':
+						if not os.path.isdir(x):
+							print(self.config.locale.FILE_DOES_NOT_EXIST)
+							continue
+					else:
+						if not os.path.isfile(x) and not os.path.isdir(x):
+							print(self.config.locale.FILE_DOES_NOT_EXIST)
+							continue
 				else:
-					if os.path.isfile(x):
+					if os.path.isfile(x) or os.path.isdir(x):
 						print(self.config.locale.FILE_ALREADY_EXISTS)
 						continue
 
