@@ -8,6 +8,7 @@ class Locale:
 	OPTION: str
 	BACK: str
 	QUIT: str
+	EXIT: str
 	BOOL_Y: str
 	BOOL_N: str
 	# errors
@@ -43,6 +44,7 @@ class LocaleEn(Locale):
 	OPTION = 'Option'
 	BACK = 'Back'
 	QUIT = 'Quit'
+	EXIT = 'Exit'
 	BOOL_Y = 'Y'
 	BOOL_N = 'n'
 	# errors
@@ -72,6 +74,7 @@ class LocaleCs(Locale):
 	OPTION = 'Volba'
 	BACK = 'Zpět'
 	QUIT = 'Ukončit'
+	EXIT = 'Ukončit'
 	BOOL_Y = 'A'
 	BOOL_N = 'n'
 	# errors
