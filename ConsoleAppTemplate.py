@@ -7,7 +7,7 @@ import json
 from Locales import *
 
 """
-Version: 2024.04.04
+Version: 2024.04.06
 """
 
 class Machine:
@@ -289,7 +289,7 @@ class Core:
 		except:
 			return 80
 
-	def clear_screen(self) -> None:
+	def clear_screen(self, print_header: bool = True) -> None:
 		machine_os = Machine.get_os()
 		if machine_os == Machine.WINDOWS:
 			os.system('cls')
@@ -297,7 +297,8 @@ class Core:
 			os.system('clear')
 		else:
 			print('\n\n')
-		print(('{:=^' + str(self.get_terminal_width()) + '}').format(' ' + self.__eval_string(self.title) + ' '))
+		if print_header:
+			print(('{:=^' + str(self.get_terminal_width()) + '}').format(' ' + self.__eval_string(self.title) + ' '))
 
 	def set_title(self, title: str|None = None) -> None:
 		title = self.__eval_string(self.title + ' - ' + title) if title else self.__eval_string(self.title)
@@ -443,3 +444,7 @@ class Core:
 				return
 			self.config.lang = languages_keys[lang_num - 1]
 		self.set_title()
+
+	def clean_and_exit(self, exit_code: int = 0) -> None:
+		self.clear_screen(False)
+		exit(exit_code)

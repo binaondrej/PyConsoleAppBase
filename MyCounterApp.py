@@ -26,7 +26,7 @@ class MyApp(Core):
 						'b': MenuItem('{{self.config.locale.BACK}}', self.menu_back)
 					}),
 					'L': MenuItem('{{self.config.locale.LANGUAGE}} ({{self.config.lang}})', self.prompt_change_language, [{'en': 'ENGLISH', 'cs': 'CZECH'}, False]),
-					'q': MenuItem('{{self.config.locale.QUIT}}', exit),
+					'q': MenuItem('{{self.config.locale.QUIT}}', self.clean_and_exit),
 				},
 				self
 			),
