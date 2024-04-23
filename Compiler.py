@@ -5,7 +5,7 @@ import uuid
 from ConsoleAppTemplate import *
 
 """
-Version: 2024.04.04
+Version: 2024.04.23
 """
 
 class Module:
@@ -122,13 +122,13 @@ class Compiler(Core):
 			return
 
 		print()
-		self.compile_py(app_file, app_tmp_py)
+		self.compile_py(app_file, app_tmp_py, True)
 		self.compile_pyc(app_tmp_py, app_dst_pyc)
 		os.remove(app_tmp_py)
 		self.input(5*'=' + ' ALL DONE ' + 5*'=')
 
 
-	def compile_py(self, app_src: str, app_dst: str) -> None:
+	def compile_py(self, app_src: str, app_dst: str, remove_comments: bool = False) -> None:
 		def make_code_block(name: str, code: str) -> str:
 			separator_format: str = '#{:=^78}#\n'
 			code_block = separator_format.format(' BEGIN: ' + name.upper() + ' ')
@@ -160,6 +160,16 @@ class Compiler(Core):
 		final_module.code += '\n' + make_code_block('Core', module_core.code)
 		final_module.code += '\n' + make_code_block('App', module_app.code)
 		print(' [ DONE ]')
+
+		if remove_comments:
+			print(self.__log_format.format('Removing comments '), end='', flush=True)
+			final_module.code = re.sub(
+				r'(^\s*\"\"\".*?\"\"\"\s*$)|(\s*#[^\n]*$)',
+				'',
+				final_module.code,
+				flags= re.MULTILINE | re.DOTALL
+			)
+			print(' [ DONE ]')
 
 		print(self.__log_format.format('Saving '), end='', flush=True)
 		final_module.save()
