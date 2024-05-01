@@ -7,7 +7,7 @@ import json
 from Locales import *
 
 """
-Version: 2024.04.06
+Version: 2024.05.01
 """
 
 class Machine:
@@ -408,7 +408,13 @@ class Core:
 			if x in options:
 				return int(x) if x.isdigit() else x
 
-	def simple_menu(self, options: dict|list, prompt: str|None = None, required: bool = True) -> str|int|None:
+	def simple_menu(self, options: dict|list, prompt: str|None = None, required: bool = True, option_name_getter: str|None = None) -> str|int|None:
+		def get_option_name(item) -> str:
+			if option_name_getter is not None:
+				res = getattr(item, option_name_getter)
+				item = res() if callable(res) else res
+			return str(item)
+
 		_opts: dict = {}
 		if type(options) is dict:
 			for key in options:
@@ -419,7 +425,7 @@ class Core:
 		options = _opts
 
 		for key in options:
-			print('{:.<5}.. {}'.format(str(key) +  ' ', options[key]))
+			print('{:.<5}.. {}'.format(str(key) +  ' ', get_option_name(options[key])))
 		return self.input_option(self.config.locale.OPTION if prompt is None else prompt, list(options.keys()), required)
 
 	def prompt_change_language(self, languages: dict[str, str], toggle: bool = False) -> None:
