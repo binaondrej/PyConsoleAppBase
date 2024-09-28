@@ -1,242 +1,22 @@
 #!/usr/bin/env python3
 
 import os
-import platform
 import re
-import json
-from Locales import *
 
-"""
-Version: 2024.05.01
-"""
+from ConsoleAppBase.Config import Config
+from ConsoleAppBase.Machine import Machine
+from ConsoleAppBase.Menu import Menu
 
-class Machine:
-	UNDEFINED = 0
-	WINDOWS = 1
-	DARWIN = 2
-
-	@staticmethod
-	def get_os() -> int:
-		if platform.system() == 'Windows':
-			return Machine.WINDOWS
-		elif platform.system() == 'Darwin':
-			return Machine.DARWIN
-		else:
-			return Machine.UNDEFINED
-
-
-class MenuItem:
-	def __init__(self, title: str, fnc: callable = None, fnc_args: list = [], submenu: dict|None = None, title_only: bool = False, show_condition: str|None = None) -> None:
-		self.title = title
-		self.fnc = fnc
-		self.fnc_args = fnc_args
-		self.submenu: dict[int|str, MenuItem] = submenu
-		self.title_only: bool = title_only
-		self.show_condition: str|None = show_condition
-
-class Menu:
-	def __init__(self, menu: dict[int|str, MenuItem], context: object|None = None) -> None:
-		"""
-		Parameters
-		----------
-		menu : dict[int | str, MenuItem]
-		context : object
-		"""
-
-		self.menu: MenuItem = MenuItem('root menu', submenu=menu)
-		self.menu_path: list[int|str] = []
-		self.context = context
-
-	def __eval(self, source: str) -> any:
-		return eval(source, None, {'self': self.context})
-	def __eval_string(self, source: str) -> str:
-		source_evals = re.findall(r'\{\{.*?\}\}', source)
-		for item in source_evals:
-			source = source.replace(item, str(self.__eval(item[2:-2])))
-		return source
-
-	def show(self) -> None:
-		"""
-		Prints the menu
-		"""
-		submenu = self.get_current().submenu
-		if submenu:
-			for key, option in submenu.items():
-				if option.show_condition and not self.__eval(option.show_condition):
-					continue
-				title = self.__eval_string(option.title)
-				if not option.title_only and not option.fnc and not option.submenu:
-					title = title + ' [ NOT IMPLEMENTED ]'
-
-				if option.title_only:
-					print(title)
-				else:
-					print('{:.<10}.. {}'.format(str(key) +  ' ', title))
-
-	def step_in(self, option: int) -> None:
-		"""
-		Opens submenu
-		"""
-		self.menu_path.append(option)
-
-	def step_out(self) -> None:
-		"""
-		Steps out from submenu to its parent
-		"""
-		self.menu_path.pop()
-
-	@staticmethod
-	def dict_get_case_insensitive(dictionary: dict, key: int|str) -> any:
-		"""
-		Gets value in dictionary by key (if str - case insensitive)
-
-		Parameters
-		----------
-		dictionary : dict
-			The dictionary where the key is looked for
-		key : int | str
-			The looked for key
-		"""
-		def to_lower(x):
-			if type(x) == str:
-				return x.lower()
-			return x
-		key = to_lower(key)
-		for item in dictionary:
-			if to_lower(item) == key:
-				return dictionary[item]
-
-	def get_option(self, option: int|str) -> MenuItem|None:
-		menu = self.get_current()
-		if menu.submenu:
-			return self.dict_get_case_insensitive(menu.submenu, option)
-		else:
-			return None
-
-	def get_current(self) -> MenuItem|None:
-		tmp_menu_item = self.menu
-		for item in self.menu_path:
-			if tmp_menu_item.submenu:
-				tmp_menu_item = self.dict_get_case_insensitive(tmp_menu_item.submenu, item)
-			else:
-				return None
-		return tmp_menu_item
-
-	def get_path(self) -> list[int|str]:
-		return self.menu_path
-
-	def get_path_text(self) -> list[str]:
-		result = []
-		menu = self.menu
-
-		for option in self.menu_path:
-			menu = self.dict_get_case_insensitive(menu.submenu, option)
-			if menu.title:
-				result.append(menu.title)
-
-		return result
-
-
-class Config:
-	def __init__(self, loader: callable = None, saver: callable = None, path: str|None = None, default_data: dict = {}, default_lang: str = 'en') -> None:
-		"""
-		Parameters
-		----------
-		loader: callable
-			params:
-				dict (data read from file)
-			returns:
-				dict|None (data to keep in memory)
-		saver: callable
-			params:
-				dict (data kept in memory)
-			returns:
-				dict|None (data to write to file)
-		path : str|None
-		default_data: dict|None
-		default_lang: str
-			shortcut for language (en/cs/...)
-		Returns
-		-------
-		bool
-			if the loader was successful
-		"""
-		self.__instantiated = False
-
-		self.__locale: Locale = Locale()
-		self.__lang: str = default_lang
-		self.lang = default_lang
-
-		self.path: str|None = path
-		self.data: dict = default_data
-		self.loader: callable = loader
-		self.saver: callable = saver
-
-		self.__instantiated = True
-
-	@property
-	def lang(self) -> str:
-		return self.__lang
-	@lang.setter
-	def lang(self, lang: str) -> None:
-		if len(lang) != 2:
-			raise ValueError(self.locale.translate('INVALID_LANGUAGE', lang))
-		lang = lang.lower()
-		try:
-			self.__locale = eval('Locale' + lang[0].upper() + lang[1:] + '()')
-			self.__lang = lang
-		except:
-			raise NotImplementedError(self.locale.translate('TRANSLATION_NOT_IMPLEMENTED', lang))
-		if self.__instantiated and self.path and self.saver:
-			self.save()
-	@property
-	def locale(self) -> Locale:
-		return self.__locale
-
-	def load(self, path: str = None) -> bool:
-		if self.loader is None:
-			raise NotImplementedError('Loader implementation is not configured')
-		if not path:
-			path = self.path
-		try:
-			with open(path, 'r', encoding='UTF-8') as file:
-				conf_content: dict = json.load(file)
-		except:
-			return False
-		if 'lang' in conf_content:
-			self.__instantiated = False
-			self.lang = conf_content['lang']
-			del conf_content['lang']
-			self.__instantiated = True
-		data = self.loader(conf_content)
-		if data is None:
-			return False
-		self.path = path
-		self.data = data
-		return True
-
-	def save(self) -> bool:
-		if self.saver is None:
-			raise NotImplementedError('Saver implementation is not configured')
-		data = self.saver(self.data)
-		if data is None:
-			return False
-		data = {**{'lang': self.lang}, **data}
-		try:
-			with open(self.path, 'w', encoding='UTF-8') as file:
-				json.dump(data, file, indent='	')
-		except:
-			return False
-		return True
 
 class Core:
 	def __init__(self, title: str, menu: Menu, config: Config, show_menu_path: bool = False) -> None:
 		"""
 		Parameters
 		----------
-		title : dict[int | str, MenuItem]
+		title : str
 			title of app, that is set as title of terminal window
-		menu : object
+			you can use "{{ ... }}" to evaluate content inside
+		menu : Menu
 		show_menu_path : bool = False
 			if True, on the top of menu will be shown current path in menu
 		"""
@@ -245,7 +25,7 @@ class Core:
 		self.menu: Menu = menu
 		self.showMenuPath: bool = show_menu_path
 		self.actionsStack: list[tuple[str|int, list]] = []  # list of pairs: option and stdin that will be used instead on user input
-		self.set_title()
+		self.set_terminal_window_title()
 		self.__stdin: list = []
 
 	def __main__(self) -> None:
@@ -264,7 +44,7 @@ class Core:
 				if option.isdigit():
 					option = int(option)
 				current_submenu = self.menu.get_option(option)
-				if current_submenu and (not current_submenu.show_condition or self.__eval(current_submenu.show_condition)) and not current_submenu.title_only:
+				if current_submenu and (not current_submenu.show_condition or self.__eval(current_submenu.show_condition)) and not current_submenu.label_only:
 					break
 				else:
 					print(self.config.locale.INVALID_OPTION)
@@ -300,7 +80,7 @@ class Core:
 		if print_header:
 			print(('{:=^' + str(self.get_terminal_width()) + '}').format(' ' + self.__eval_string(self.title) + ' '))
 
-	def set_title(self, title: str|None = None) -> None:
+	def set_terminal_window_title(self, title: str|None = None) -> None:
 		title = self.__eval_string(self.title + ' - ' + title) if title else self.__eval_string(self.title)
 		machine_os = Machine.get_os()
 		if machine_os == Machine.WINDOWS:
@@ -449,7 +229,7 @@ class Core:
 			if not lang_num:
 				return
 			self.config.lang = languages_keys[lang_num - 1]
-		self.set_title()
+		self.set_terminal_window_title()
 
 	def clean_and_exit(self, exit_code: int = 0) -> None:
 		self.clear_screen(False)

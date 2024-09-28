@@ -1,10 +1,19 @@
 #!/usr/bin/env python3
 
-from ConsoleAppTemplate import *
+import os
+
+from ConsoleAppBase import Config, Core, MenuItem, Menu
+from Locales import LocaleCs, LocaleEn
+
 
 class MyApp(Core):
 	def __init__(self):
 		config: Config = Config(
+			{
+				'cs': LocaleCs,
+				'en': LocaleEn,
+			},
+			'en',
 			self.__config_loader,
 			self.__config_saver,
 			os.path.splitext(os.path.basename(__file__))[0] + '.conf',
@@ -15,9 +24,9 @@ class MyApp(Core):
 			'{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}',
 			Menu(
 				{
-					'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
+					'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', label_only=True),
 					'E': MenuItem('{{self.config.locale.VALUE_EDIT}}', submenu={
-						'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', title_only=True),
+						'counterDisplay': MenuItem('{{self.config.locale.COUNTER}}: {{self.config.data[\'counter\']}}', label_only=True),
 						'I': MenuItem('{{self.config.locale.INCREASE}}', self.counter_increase),
 						'D': MenuItem('{{self.config.locale.DECREASE}}', self.counter_decrease),
 						'IT': MenuItem('{{self.config.locale.translate(\'INCREASE_BY\', 10)}}', self.counter_increase, [10]),
@@ -67,7 +76,7 @@ class MyApp(Core):
 		self.config.save()
 
 	def counter_clear_prompt(self) -> None:
-		if self.input_bool('Clear counter'):
+		if self.input_bool(self.config.locale.CLEAR_COUNTER):
 			self.counter_clear()
 
 

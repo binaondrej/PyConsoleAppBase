@@ -1,8 +1,4 @@
 /.idea/
-/.venv/
-/__pycache__
-
 .DS_Store
-
-MyCounterApp.conf
-MyCounterApp_StandAlone.py
+__pycache__
+.venv/
