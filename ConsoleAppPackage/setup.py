@@ -5,7 +5,7 @@ with open('README.md', encoding='utf-8') as f:
 
 setup(
 	name='ConsoleAppBase',
-	version='1.0.0',
+	version='1.0.1',
 	author='Ondřej (Binič) Bína',
 	author_email='xbinao@seznam.cz',
 	description='Console App Base',

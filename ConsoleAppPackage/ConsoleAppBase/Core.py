@@ -24,7 +24,6 @@ class Core:
 		self.title: str = title
 		self.menu: Menu = menu
 		self.showMenuPath: bool = show_menu_path
-		self.actionsStack: list[tuple[str|int, list]] = []  # list of pairs: option and stdin that will be used instead on user input
 		self.set_terminal_window_title()
 		self.__stdin: list = []
 
@@ -36,10 +35,6 @@ class Core:
 
 			self.menu.show()
 			while True:
-				self.__stdin = []
-				if self.actionsStack:
-					tmp = self.actionsStack.pop(0)
-					self.__stdin = [tmp[0]] + tmp[1]
 				option = self.input(self.config.locale.OPTION + ': ')
 				if option.isdigit():
 					option = int(option)
