@@ -3,7 +3,7 @@
 
 ## Local installation
 ```shell
-pip install ConsoleAppBase-1.0.1-py3-none-any.whl --force-reinstall
+pip install ConsoleAppBase-1.0.2-py3-none-any.whl --force-reinstall
 ```
 
 

@@ -174,14 +174,15 @@ class Core:
 			return x
 
 	def input_option(self, text: str, options: list, required: bool = True) -> str|int|None:
+		options_str_lower: list[str] = []
 		for i in range(len(options)):
-			options[i] = str(options[i]).lower()
+			options_str_lower.append(str(options[i]).lower())
 		while True:
 			x = self.input(text + ': ').lower()
 			if not x and not required:
 				return None
-			if x in options:
-				return int(x) if x.isdigit() else x
+			if x in options_str_lower:
+				return options[options_str_lower.index(x)]
 
 	def simple_menu(self, options: dict|list, prompt: str|None = None, required: bool = True, option_name_getter: str|None = None) -> str|int|None:
 		def get_option_name(item) -> str:
@@ -190,17 +191,17 @@ class Core:
 				item = res() if callable(res) else res
 			return str(item)
 
-		_opts: dict = {}
+		_opts: dict[str, any] = {}
 		if type(options) is dict:
 			for key in options:
 				_opts[str(key)] = options[key]
 		else:
 			for i in range(len(options)):
 				_opts[str(i + 1)] = options[i]
-		options = _opts
+		options: dict[str, any] = _opts
 
 		for key in options:
-			print('{:.<5}.. {}'.format(str(key) +  ' ', get_option_name(options[key])))
+			print('{:.<5}.. {}'.format(key +  ' ', get_option_name(options[key])))
 		return self.input_option(self.config.locale.OPTION if prompt is None else prompt, list(options.keys()), required)
 
 	def prompt_change_language(self, languages: dict[str, str], toggle: bool = False) -> None:
