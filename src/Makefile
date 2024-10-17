@@ -1,7 +1,7 @@
-#include .env
-
-PYTHON=python3
+PYTHON=python3.12
 VENV_NAME=.venv
+
+.PHONY: build clean-all
 
 #######################################################################
 ############################### TARGETS ###############################
@@ -9,17 +9,17 @@ VENV_NAME=.venv
 
 help:
 	@echo " 🚩 help   ........................   Show help"
-	@echo " 🚩 setup-venv   ..................   Setup venv (clean)"
-	@echo " 🚩 clean-venv   ..................   Delete venv"
+	@echo " 🚩 venv-setup   ..................   Setup venv (clean)"
+	@echo " 🚩 venv-clean   ..................   Delete venv"
 	@echo " 🚩 clean-build-support   .........   Delete build support files"
 	@echo " 🚩 clean-all   ...................   Delete venv and build support files"
 	@echo " 🚩 build   .......................   Build package"
 	@echo " 🚩 one-time-build   ..............   Setup venv & Build & Clean all"
 
 
-setup-venv:
+venv-setup:
 	@echo "Deleting venv '$(VENV_NAME)'"
-	@make clean-venv
+	@make venv-clean
 	@{ \
 		echo "Creating new venv '$(VENV_NAME)'" ;\
 		$(PYTHON) -m venv $(VENV_NAME) ;\
@@ -33,19 +33,19 @@ setup-venv:
 		deactivate ;\
 	}
 
-clean-venv:
+venv-clean:
 	@rm -Rf ./$(VENV_NAME)/
 
 clean-build-support:
-	@rm -Rf ./$(VENV_NAME)/ ./build/ ./*\.egg-info/
+	@rm -Rf ./build/ ./*\.egg-info/ ./dist/*.tar.gz
 
-clean-all: clean-venv clean-build-support
+clean-all: venv-clean clean-build-support
 
 build:
 	@{ \
   		source $(VENV_NAME)/bin/activate ;\
-		python setup.py sdist bdist_wheel ;\
+		python -m build ;\
 		deactivate ;\
 	}
 
-one-time-build: setup-venv build clean-all
+one-time-build: venv-setup build clean-all

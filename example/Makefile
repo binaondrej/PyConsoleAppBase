@@ -3,7 +3,7 @@
 PYTHON=python3
 VENV_NAME=.venv
 
-PACKAGE=../ConsoleAppPackage/dist/ConsoleAppBase-1.0.2-py3-none-any.whl
+PACKAGE=../ConsoleAppPackage/dist/ConsoleAppBase-1.0.3-py3-none-any.whl
 PROG_NAME=MyCounterApp
 
 #######################################################################
@@ -12,14 +12,14 @@ PROG_NAME=MyCounterApp
 
 help:
 	@echo " 🚩 help   ........................   Show help"
-	@echo " 🚩 setup-venv   ..................   Setup venv (clean)"
-	@echo " 🚩 clean-venv   ..................   Delete venv"
+	@echo " 🚩 venv-setup   ..................   Setup venv (clean)"
+	@echo " 🚩 venv-clean   ..................   Delete venv"
 	@echo " 🚩 run   .........................   Run program"
 
 
-setup-venv:
+venv-setup:
 	@echo "Deleting venv '$(VENV_NAME)'"
-	@make clean-venv
+	@make venv-clean
 	@{ \
 		echo "Creating new venv '$(VENV_NAME)'" ;\
 		$(PYTHON) -m venv $(VENV_NAME) ;\
@@ -32,7 +32,7 @@ setup-venv:
 		deactivate ;\
 	}
 
-clean-venv:
+venv-clean:
 	@rm -Rf ./$(VENV_NAME)/
 
 run:
