@@ -3,7 +3,7 @@
 PYTHON=python3
 VENV_NAME=.venv
 
-PACKAGE=../ConsoleAppPackage/dist/ConsoleAppBase-1.0.3-py3-none-any.whl
+PACKAGE=../ConsoleAppPackage/dist/ConsoleAppBase-1.0.4-py3-none-any.whl
 PROG_NAME=MyCounterApp
 
 #######################################################################

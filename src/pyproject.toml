@@ -7,7 +7,7 @@ name = "ConsoleAppBase"
 authors = [
     {name = "Ondřej Bína", email = "xbinao@seznam.cz"}
 ]
-version = "1.0.3"
+version = "1.0.4"
 description = "Console App Base"
 readme = "README.md"
 classifiers = [

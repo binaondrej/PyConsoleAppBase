@@ -5,12 +5,12 @@
 
 **From internet**
 ```shell
-pip3 install "https://github.com/binaondrej/PyConsoleAppBase/blob/main/ConsoleAppPackage/dist/ConsoleAppBase-1.0.3-py3-none-any.whl"
+pip3 install "https://github.com/binaondrej/PyConsoleAppBase/releases/download/release-1.0.4/ConsoleAppBase-1.0.4-py3-none-any.whl"
 ```
 
 **From local file** 
 ```shell
-pip3 install ConsoleAppBase-1.0.3-py3-none-any.whl
+pip3 install ConsoleAppBase-1.0.4-py3-none-any.whl
 ```
 
 **One installation in environments**\

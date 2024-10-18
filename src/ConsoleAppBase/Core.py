@@ -2,6 +2,7 @@
 
 import os
 import re
+from typing import Callable
 
 from ConsoleAppBase.Config import Config
 from ConsoleAppBase.Machine import Machine
@@ -184,24 +185,23 @@ class Core:
 			if x in options_str_lower:
 				return options[options_str_lower.index(x)]
 
-	def simple_menu(self, options: dict|list, prompt: str|None = None, required: bool = True, option_name_getter: str|None = None) -> str|int|None:
-		def get_option_name(item) -> str:
-			if option_name_getter is not None:
-				res = getattr(item, option_name_getter)
-				item = res() if callable(res) else res
-			return str(item)
+	def simple_menu[K, V](self, options: dict[K, V]|list[V], prompt: str|None = None, required: bool = True, option_label_getter: Callable[[V], str]|None = None) -> str|int|None:
+		def get_option_label(value: V) -> str:
+			if option_label_getter is not None and callable(option_label_getter):
+				return option_label_getter(value)
+			return str(value)
 
-		_opts: dict[str, any] = {}
+		_opts: dict[str, V] = {}
 		if type(options) is dict:
 			for key in options:
 				_opts[str(key)] = options[key]
 		else:
 			for i in range(len(options)):
 				_opts[str(i + 1)] = options[i]
-		options: dict[str, any] = _opts
+		options: dict[str, V] = _opts
 
 		for key in options:
-			print('{:.<5}.. {}'.format(key +  ' ', get_option_name(options[key])))
+			print('{:.<5}.. {}'.format(key +  ' ', get_option_label(options[key])))
 		return self.input_option(self.config.locale.OPTION if prompt is None else prompt, list(options.keys()), required)
 
 	def prompt_change_language(self, languages: dict[str, str], toggle: bool = False) -> None:
